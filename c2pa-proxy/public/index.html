@@ -1,0 +1,1097 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DigiCert C2PA Signing Tool</title>
+  <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --navy: #003B5C; --navy-hover: #002E48; --teal: #4EC9B0;
+      --bg: #F1F3F5; --card: #FFFFFF; --border: #DEE2E6; --border-light: #E8EAED;
+      --text: #1A1A1A; --sub: #9CA3AF;
+      --green: #15803D; --green-bg: #F0FAF4; --green-border: #A7DFC2;
+      --red: #DC2626; --red-dark: #991B1B; --red-bg: #FEF2F2; --red-border: #FECACA;
+      --blue-bg: #EDF5FA; --blue-border: #BDD9EC;
+      --font: 'Source Sans 3', 'Source Sans Pro', -apple-system, sans-serif;
+      --mono: 'IBM Plex Mono', monospace;
+    }
+    body { font-family: var(--font); color: var(--text); background: var(--bg); min-height: 100vh; display: flex; flex-direction: column; }
+
+    /* Header */
+    header {
+      background: var(--navy); padding: 0 32px; height: 56px;
+      display: flex; align-items: center; justify-content: space-between;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.12); flex-shrink: 0;
+    }
+    .header-left { display: flex; align-items: center; gap: 10px; }
+    .header-left span { color: #fff; font-size: 16px; font-weight: 600; letter-spacing: -0.02em; }
+    .header-right { color: rgba(255,255,255,0.5); font-size: 12px; }
+
+    /* Main */
+    main { flex: 1; display: flex; align-items: flex-start; justify-content: center; padding: 40px 24px; }
+    .container { width: 100%; max-width: 680px; }
+
+    /* Card */
+    .card {
+      background: var(--card); border-radius: 12px; border: 1px solid var(--border);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.03); overflow: hidden;
+    }
+    .card-body { padding: 28px; }
+
+    /* Dropzone */
+    .dropzone {
+      border: 2px dashed var(--border); border-radius: 10px; background: #FAFBFC;
+      padding: 48px 24px; text-align: center; cursor: pointer; transition: all 0.2s ease;
+    }
+    .dropzone.over { border-color: var(--navy); background: var(--blue-bg); }
+    .dropzone-icon {
+      width: 56px; height: 56px; border-radius: 14px; background: #F0F2F4;
+      display: inline-flex; align-items: center; justify-content: center;
+      margin-bottom: 16px; transition: all 0.2s ease;
+    }
+    .dropzone.over .dropzone-icon { background: var(--navy); }
+    .dropzone.over .dropzone-icon svg { stroke: #fff; }
+    .dropzone h3 { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+    .dropzone p { font-size: 13.5px; color: var(--sub); margin-bottom: 14px; }
+    .dropzone p a { color: var(--navy); font-weight: 500; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+    .formats { display: inline-flex; align-items: center; gap: 12px; font-size: 12px; color: #B0B5BC; font-family: var(--mono); }
+    .formats .dot { width: 3px; height: 3px; border-radius: 50%; background: #D1D5DB; display: inline-block; }
+
+    /* File list */
+    .file-list { margin-bottom: 20px; }
+    .file-list-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 12px; padding: 0 2px;
+    }
+    .file-list-header .count { font-size: 13px; font-weight: 600; color: var(--text); }
+    .file-list-header .total { font-size: 12px; color: var(--sub); font-family: var(--mono); }
+    .file-list-header button {
+      font-size: 12px; color: var(--sub); background: none; border: none;
+      cursor: pointer; text-decoration: underline; text-underline-offset: 2px;
+      font-family: var(--font);
+    }
+    .file-list-header button:hover { color: var(--red); }
+
+    .file-item {
+      display: flex; align-items: center; gap: 12px; padding: 10px 14px;
+      background: #FAFBFC; border: 1px solid var(--border-light); border-radius: 8px;
+      margin-bottom: 6px; transition: all 0.15s;
+    }
+    .file-item img {
+      width: 36px; height: 36px; border-radius: 5px; object-fit: cover;
+      border: 1px solid var(--border-light); flex-shrink: 0;
+    }
+    .file-item .fi-info { flex: 1; min-width: 0; }
+    .file-item .fi-name {
+      font-size: 13px; font-weight: 600;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .file-item .fi-meta { font-size: 11px; color: var(--sub); font-family: var(--mono); margin-top: 2px; }
+    .file-item .fi-status { flex-shrink: 0; display: flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 500; }
+    .fi-status.pending { color: var(--sub); }
+    .fi-status.signing { color: var(--navy); }
+    .fi-status.done { color: var(--green); }
+    .fi-status.error { color: var(--red); }
+    .file-item .fi-remove {
+      width: 26px; height: 26px; border-radius: 5px; border: 1px solid transparent;
+      background: none; display: flex; align-items: center; justify-content: center;
+      cursor: pointer; flex-shrink: 0; transition: all 0.15s;
+    }
+    .file-item .fi-remove:hover { border-color: var(--red); background: var(--red-bg); }
+
+    .mini-spinner {
+      width: 14px; height: 14px; border: 2px solid var(--navy);
+      border-top-color: transparent; border-radius: 50%;
+      animation: spin 0.8s linear infinite; flex-shrink: 0;
+    }
+
+    /* Progress bar */
+    .progress-section { margin-bottom: 20px; }
+    .progress-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 8px; font-size: 13px;
+    }
+    .progress-header .label { font-weight: 600; color: var(--navy); }
+    .progress-header .counter { color: var(--sub); font-family: var(--mono); font-size: 12px; }
+    .progress-track {
+      width: 100%; height: 6px; background: #E8ECF0; border-radius: 3px; overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%; background: var(--navy); border-radius: 3px;
+      transition: width 0.3s ease;
+    }
+
+    /* Results summary */
+    .results-summary {
+      display: flex; gap: 12px; margin-bottom: 20px;
+    }
+    .result-stat {
+      flex: 1; padding: 14px 16px; border-radius: 8px; text-align: center;
+    }
+    .result-stat.success { background: var(--green-bg); border: 1px solid var(--green-border); }
+    .result-stat.failed { background: var(--red-bg); border: 1px solid var(--red-border); }
+    .result-stat .stat-num { font-size: 24px; font-weight: 700; line-height: 1; margin-bottom: 4px; }
+    .result-stat.success .stat-num { color: var(--green); }
+    .result-stat.failed .stat-num { color: var(--red); }
+    .result-stat .stat-label { font-size: 11px; font-weight: 500; color: var(--sub); text-transform: uppercase; letter-spacing: 0.05em; }
+
+    /* Verify bar */
+    .verify-bar {
+      display: flex; align-items: center; gap: 10px; padding: 14px 16px;
+      background: var(--blue-bg); border: 1px solid var(--blue-border);
+      border-radius: 8px; margin-bottom: 20px; font-size: 13px; color: var(--navy);
+    }
+    .verify-bar a { color: var(--navy); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
+
+    /* Buttons */
+    .btn-row { display: flex; gap: 10px; }
+    .btn-primary {
+      flex: 1; padding: 12px 20px; border-radius: 8px; border: none;
+      background: var(--navy); color: #fff; font-size: 14px; font-weight: 600;
+      font-family: var(--font); cursor: pointer; transition: background 0.15s;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn-primary:hover { background: var(--navy-hover); }
+    .btn-primary:disabled { background: #A0B4C0; cursor: not-allowed; }
+    .btn-primary.green { background: var(--green); }
+    .btn-primary.green:hover { background: #116B32; }
+    .btn-secondary {
+      padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border);
+      background: #FAFBFC; font-size: 13.5px; font-weight: 600; color: #6B7280;
+      font-family: var(--font); cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.15s;
+    }
+    .btn-secondary:hover { background: #F0F2F4; }
+    .btn-add {
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 8px 14px; border-radius: 7px; border: 1px dashed var(--border);
+      background: none; font-size: 12px; font-weight: 600; color: var(--sub);
+      font-family: var(--font); cursor: pointer; transition: all 0.15s; width: 100%;
+      margin-bottom: 20px;
+    }
+    .btn-add:hover { border-color: var(--navy); color: var(--navy); background: var(--blue-bg); }
+
+    /* How it works */
+    .how-it-works { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-top: 24px; }
+    .how-card { background: #fff; border: 1px solid var(--border-light); border-radius: 8px; padding: 18px 16px; text-align: center; }
+    .how-card .how-icon { width: 36px; height: 36px; border-radius: 8px; background: var(--blue-bg); display: inline-flex; align-items: center; justify-content: center; margin-bottom: 10px; }
+    .how-card h4 { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+    .how-card p { font-size: 12px; color: var(--sub); line-height: 1.5; }
+
+    /* Signing log */
+    .log-section { margin-top: 24px; }
+    .log-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .log-header h3 { font-size: 14px; font-weight: 700; color: var(--text); }
+    .log-header .log-count { font-size: 12px; color: var(--sub); font-family: var(--mono); }
+    .log-table {
+      width: 100%; border-collapse: collapse; font-size: 12.5px;
+      background: #fff; border: 1px solid var(--border-light); border-radius: 8px; overflow: hidden;
+    }
+    .log-table th {
+      text-align: left; padding: 10px 14px; background: #FAFBFC;
+      font-size: 10px; font-weight: 600; color: var(--sub);
+      text-transform: uppercase; letter-spacing: 0.05em;
+      border-bottom: 1px solid var(--border-light);
+    }
+    .log-table td {
+      padding: 10px 14px; border-bottom: 1px solid #F5F5F5;
+      vertical-align: middle;
+    }
+    .log-table tr:last-child td { border-bottom: none; }
+    .log-table .log-status { font-weight: 600; font-size: 11.5px; }
+    .log-table .log-status.done { color: var(--green); }
+    .log-table .log-status.error { color: var(--red); }
+    .log-table .log-name { font-weight: 500; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .log-table .log-dl {
+      color: var(--navy); font-weight: 600; text-decoration: underline;
+      text-underline-offset: 2px; cursor: pointer; background: none; border: none;
+      font-family: var(--font); font-size: 12px;
+    }
+    .log-table .log-dl:hover { color: var(--navy-hover); }
+
+    footer {
+      padding: 16px 32px; border-top: 1px solid var(--border-light); background: #FAFBFC;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      flex-shrink: 0; font-size: 12px; color: #B0B5BC;
+    }
+
+    .hidden { display: none !important; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Tabs */
+    .tab-bar {
+      display: flex; gap: 0; margin-top: 24px; margin-bottom: 0;
+      border-bottom: 2px solid var(--border-light);
+    }
+    .tab-btn {
+      padding: 10px 20px; font-size: 13px; font-weight: 600;
+      font-family: var(--font); color: var(--sub); background: none;
+      border: none; cursor: pointer; border-bottom: 2px solid transparent;
+      margin-bottom: -2px; transition: all 0.15s;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .tab-btn:hover { color: var(--navy); }
+    .tab-btn.active { color: var(--navy); border-bottom-color: var(--navy); }
+    .tab-panel {
+      background: #fff; border: 1px solid var(--border-light); border-top: none;
+      border-radius: 0 0 8px 8px; padding: 20px;
+    }
+
+    /* Before/After comparison */
+    .compare-select {
+      display: flex; align-items: center; gap: 10px; margin-bottom: 16px;
+    }
+    .compare-select label { font-size: 13px; font-weight: 600; color: var(--text); }
+    .compare-select select {
+      flex: 1; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px;
+      font-size: 13px; font-family: var(--font); color: var(--text); background: #FAFBFC;
+      cursor: pointer; outline: none;
+    }
+    .compare-container {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+    }
+    .compare-panel {
+      border: 1px solid var(--border-light); border-radius: 8px; overflow: hidden;
+    }
+    .compare-panel-header {
+      padding: 10px 14px; background: #FAFBFC; border-bottom: 1px solid var(--border-light);
+      font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 6px;
+    }
+    .compare-panel-header.original { color: var(--sub); }
+    .compare-panel-header.signed { color: var(--green); }
+    .compare-panel-body {
+      padding: 12px; display: flex; align-items: center; justify-content: center;
+      min-height: 200px; background: #F9F9F9;
+    }
+    .compare-panel-body img {
+      max-width: 100%; max-height: 300px; border-radius: 4px;
+      object-fit: contain;
+    }
+    .compare-meta {
+      padding: 10px 14px; border-top: 1px solid var(--border-light);
+      font-size: 11px; font-family: var(--mono); color: var(--sub);
+      display: flex; justify-content: space-between;
+    }
+    .compare-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .compare-badge.none { background: #F0F2F4; color: var(--sub); }
+    .compare-badge.c2pa { background: var(--green-bg); color: var(--green); }
+    .compare-empty {
+      text-align: center; padding: 40px 20px; color: var(--sub); font-size: 13px;
+    }
+
+    /* Verify dropzone */
+    .verify-drop {
+      border: 2px dashed var(--border); border-radius: 10px; background: #FAFBFC;
+      padding: 36px 24px; text-align: center; cursor: pointer; transition: all 0.2s;
+    }
+    .verify-drop.over { border-color: var(--navy); background: var(--blue-bg); }
+    .verify-drop h3 { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+    .verify-drop p { font-size: 13px; color: var(--sub); }
+    .verify-result {
+      margin-top: 16px; padding: 16px; border-radius: 8px;
+      border: 1px solid var(--border-light); background: #FAFBFC;
+    }
+    .verify-result-header {
+      display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
+    }
+    .verify-result-header .vr-icon {
+      width: 32px; height: 32px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .verify-result-header .vr-icon.found { background: var(--green-bg); }
+    .verify-result-header .vr-icon.none { background: #F0F2F4; }
+    .verify-result-header .vr-title { font-size: 14px; font-weight: 600; }
+    .verify-result-header .vr-title.found { color: var(--green); }
+    .verify-result-header .vr-title.none { color: var(--sub); }
+    .verify-manifest {
+      margin-top: 12px; padding: 12px 14px; background: #1E1E1E; color: #D4D4D4;
+      border-radius: 6px; font-family: var(--mono); font-size: 11px;
+      line-height: 1.6; max-height: 250px; overflow-y: auto;
+      white-space: pre-wrap; word-break: break-all;
+    }
+    .verify-links {
+      margin-top: 12px; font-size: 12.5px; color: var(--sub);
+    }
+    .verify-links a { color: var(--navy); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
+
+    /* Manifest modal */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.35);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 1000; padding: 24px;
+    }
+    .modal {
+      background: #fff; border-radius: 12px; width: 100%; max-width: 580px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.15); overflow: hidden;
+      max-height: 80vh; display: flex; flex-direction: column;
+    }
+    .modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 18px 22px; border-bottom: 1px solid var(--border-light);
+    }
+    .modal-header h3 { font-size: 15px; font-weight: 700; color: var(--text); }
+    .modal-close {
+      width: 30px; height: 30px; border-radius: 6px; border: 1px solid var(--border-light);
+      background: #fff; display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .modal-close:hover { background: var(--red-bg); border-color: var(--red); }
+    .modal-body { padding: 20px 22px; overflow-y: auto; flex: 1; }
+    .modal-meta {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 8px 20px;
+      margin-bottom: 16px; font-size: 12px; font-family: var(--mono);
+    }
+    .modal-meta .mm-label { font-size: 10px; font-weight: 500; color: var(--sub); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px; }
+    .modal-meta .mm-value { color: var(--text); font-weight: 500; }
+    .modal-manifest {
+      padding: 14px 16px; background: #1E1E1E; color: #D4D4D4;
+      border-radius: 8px; font-family: var(--mono); font-size: 11.5px;
+      line-height: 1.6; max-height: 350px; overflow-y: auto;
+      white-space: pre-wrap; word-break: break-all;
+    }
+    .modal-no-manifest {
+      padding: 24px; text-align: center; color: var(--sub); font-size: 13px;
+      background: #FAFBFC; border-radius: 8px;
+    }
+
+    @media (max-width: 600px) {
+      header { padding: 0 16px; }
+      main { padding: 24px 16px; }
+      .how-it-works { grid-template-columns: 1fr; }
+      .results-summary { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="header-left">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4EC9B0" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/>
+      </svg>
+      <span>DigiCert C2PA Signing Tool</span>
+    </div>
+    <div class="header-right">Document Trust Manager</div>
+  </header>
+
+  <main>
+    <div class="container">
+      <div class="card">
+        <div class="card-body">
+
+          <!-- Dropzone -->
+          <div class="dropzone" id="dropzone">
+            <div class="dropzone-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+              </svg>
+            </div>
+            <h3 id="dropTitle">Drag and drop images here</h3>
+            <p>or <a id="browseLink">browse files</a> — select multiple</p>
+            <div class="formats"><span>JPG</span><span class="dot"></span><span>PNG</span><span class="dot"></span><span>Max 20 MB each</span></div>
+            <input type="file" id="fileInput" accept=".jpg,.jpeg,.png" multiple style="display:none">
+          </div>
+
+          <!-- File list -->
+          <div class="hidden" id="fileListSection">
+            <div class="file-list-header">
+              <span class="count" id="fileCount">0 images</span>
+              <span class="total" id="fileTotal"></span>
+              <button onclick="clearAll()">Clear all</button>
+            </div>
+            <div class="file-list" id="fileList"></div>
+            <button class="btn-add" onclick="addMore()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add more images
+            </button>
+          </div>
+
+          <!-- Progress -->
+          <div class="progress-section hidden" id="progressSection">
+            <div class="progress-header">
+              <span class="label" id="progressLabel">Signing images…</span>
+              <span class="counter" id="progressCounter">0 / 0</span>
+            </div>
+            <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+          </div>
+
+          <!-- Results summary -->
+          <div class="results-summary hidden" id="resultsSummary">
+            <div class="result-stat success">
+              <div class="stat-num" id="successCount">0</div>
+              <div class="stat-label">Signed</div>
+            </div>
+            <div class="result-stat failed">
+              <div class="stat-num" id="failCount">0</div>
+              <div class="stat-label">Failed</div>
+            </div>
+          </div>
+
+          <!-- Verify bar -->
+          <div class="verify-bar hidden" id="verifyBar">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#003B5C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
+            <span>Verify signed images at <a href="https://contentcredentials.org/verify" target="_blank" rel="noopener">contentcredentials.org/verify</a> or <a href="https://c2paviewer.com" target="_blank" rel="noopener">C2PA Viewer</a></span>
+          </div>
+
+          <!-- Buttons -->
+          <div class="btn-row hidden" id="btnSign">
+            <button class="btn-primary" id="btnSignAll" onclick="handleSignAll()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
+              <span id="btnSignLabel">Sign All with C2PA</span>
+            </button>
+          </div>
+          <div class="btn-row hidden" id="btnResults">
+            <button class="btn-primary green" id="btnDownloadZip" onclick="handleDownloadZip()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Download All as ZIP
+            </button>
+            <button class="btn-secondary" onclick="handleReset()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+              New Batch
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- How it works -->
+      <div class="how-it-works" id="howItWorks">
+        <div class="how-card">
+          <div class="how-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#003B5C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
+          <h4>Upload</h4><p>Drop one or many JPG/PNG images at once</p>
+        </div>
+        <div class="how-card">
+          <div class="how-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#003B5C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg></div>
+          <h4>Batch Sign</h4><p>Each image is signed sequentially via DigiCert C2PA</p>
+        </div>
+        <div class="how-card">
+          <div class="how-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#003B5C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
+          <h4>Download</h4><p>Get all signed images in a single ZIP file</p>
+        </div>
+      </div>
+
+      <!-- Signing log -->
+      <div class="log-section hidden" id="logSection">
+        <div class="log-header">
+          <h3>Signing Log</h3>
+          <span class="log-count" id="logCount"></span>
+        </div>
+        <table class="log-table">
+          <thead>
+            <tr><th>File</th><th>Size</th><th>Status</th><th>Time</th><th></th><th></th></tr>
+          </thead>
+          <tbody id="logBody"></tbody>
+        </table>
+      </div>
+
+      <!-- Tabs: Compare & Verify -->
+      <div class="hidden" id="toolTabs">
+        <div class="tab-bar">
+          <button class="tab-btn active" onclick="switchTab('compare')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/></svg>
+            Before / After
+          </button>
+          <button class="tab-btn" onclick="switchTab('verify')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
+            Verify Signature
+          </button>
+        </div>
+
+        <!-- Compare panel -->
+        <div class="tab-panel" id="tabCompare">
+          <div class="compare-select">
+            <label>Image:</label>
+            <select id="compareSelect" onchange="renderCompare()"></select>
+          </div>
+          <div id="compareContent">
+            <div class="compare-empty">Sign images to see before/after comparison</div>
+          </div>
+        </div>
+
+        <!-- Verify panel -->
+        <div class="tab-panel hidden" id="tabVerify">
+          <div class="verify-drop" id="verifyDrop">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:10px">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/>
+            </svg>
+            <h3 id="verifyDropTitle">Drop a signed image here to verify</h3>
+            <p>We'll check if it contains a valid C2PA manifest</p>
+            <input type="file" id="verifyInput" accept=".jpg,.jpeg,.png" style="display:none">
+          </div>
+          <div class="hidden" id="verifyResult"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+    Secured by DigiCert Document Trust Manager · C2PA Compliant
+  </footer>
+
+  <!-- Manifest modal -->
+  <div class="hidden" id="manifestModal"></div>
+
+  <script>
+    const CONFIG = {
+      ACCOUNT_ID: "d845c3f6-6b61-46d0-af70-67ef7ce26b71",
+      HASH_ALGO: "SHA256",
+      SIGN_ALGO: "1.2.840.113549.1.1.10",
+      SIGN_ALGO_PARAMS: "MTIzNDQ=",
+      SCHEMA_FIELD: "author,publisher",
+    };
+
+    const ACCEPTED = ["image/jpeg", "image/png"];
+    const MAX_SIZE = 20 * 1024 * 1024;
+
+    // Each item: { id, file, previewUrl, status: 'pending'|'signing'|'done'|'error', signedBlob, signedName, error, duration }
+    let queue = [];
+    let signing = false;
+    let idCounter = 0;
+
+    const $ = (id) => document.getElementById(id);
+
+    // ═══ Dropzone ═══
+    const dropzone = $("dropzone");
+    const fileInput = $("fileInput");
+
+    dropzone.addEventListener("dragover", (e) => { e.preventDefault(); dropzone.classList.add("over"); $("dropTitle").textContent = "Drop to upload"; });
+    dropzone.addEventListener("dragleave", () => { dropzone.classList.remove("over"); $("dropTitle").textContent = "Drag and drop images here"; });
+    dropzone.addEventListener("drop", (e) => {
+      e.preventDefault(); dropzone.classList.remove("over"); $("dropTitle").textContent = "Drag and drop images here";
+      addFiles(e.dataTransfer.files);
+    });
+    dropzone.addEventListener("click", () => fileInput.click());
+    $("browseLink").addEventListener("click", (e) => { e.stopPropagation(); fileInput.click(); });
+    fileInput.addEventListener("change", () => { addFiles(fileInput.files); fileInput.value = ""; });
+
+    function addMore() { fileInput.click(); }
+
+    // ═══ File management ═══
+    function addFiles(fileList) {
+      let added = 0;
+      for (const file of fileList) {
+        if (!ACCEPTED.includes(file.type)) continue;
+        if (file.size > MAX_SIZE) continue;
+        queue.push({
+          id: ++idCounter,
+          file,
+          previewUrl: URL.createObjectURL(file),
+          status: "pending",
+          signedBlob: null,
+          signedName: null,
+          error: null,
+          duration: null,
+        });
+        added++;
+      }
+      if (added > 0) renderFileList();
+    }
+
+    function removeFile(id) {
+      const item = queue.find(q => q.id === id);
+      if (item && item.previewUrl) URL.revokeObjectURL(item.previewUrl);
+      queue = queue.filter(q => q.id !== id);
+      if (queue.length === 0) { handleReset(); return; }
+      renderFileList();
+    }
+
+    function clearAll() { handleReset(); }
+
+    function renderFileList() {
+      dropzone.classList.add("hidden");
+      $("howItWorks").classList.add("hidden");
+      $("fileListSection").classList.remove("hidden");
+
+      const pending = queue.filter(q => q.status === "pending").length;
+      const total = queue.length;
+      const totalSize = queue.reduce((s, q) => s + q.file.size, 0);
+
+      $("fileCount").textContent = total + (total === 1 ? " image" : " images");
+      $("fileTotal").textContent = formatBytes(totalSize);
+
+      // Show sign button only if there are pending items and not currently signing
+      if (pending > 0 && !signing) {
+        $("btnSign").classList.remove("hidden");
+        $("btnSignLabel").textContent = pending === 1 ? "Sign with C2PA" : `Sign All (${pending}) with C2PA`;
+      } else if (!signing) {
+        $("btnSign").classList.add("hidden");
+      }
+
+      const list = $("fileList");
+      list.innerHTML = "";
+      for (const item of queue) {
+        const row = document.createElement("div");
+        row.className = "file-item";
+        if (item.status === "error") row.style.borderColor = "var(--red-border)";
+        row.innerHTML = `
+          <img src="${item.previewUrl}" alt="">
+          <div class="fi-info">
+            <div class="fi-name">${esc(item.file.name)}</div>
+            <div class="fi-meta">${formatBytes(item.file.size)} · ${item.file.type === "image/png" ? "PNG" : "JPEG"}</div>
+            ${item.status === "error" && item.error ? `<div style="font-size:11px;color:var(--red);margin-top:3px;line-height:1.4;">${esc(item.error)}</div>` : ""}
+          </div>
+          <div class="fi-status ${item.status}">
+            ${item.status === "pending" ? "Pending" :
+              item.status === "signing" ? '<div class="mini-spinner"></div> Signing…' :
+              item.status === "done" ? '✓ Signed' :
+              '✕ Failed'}
+          </div>
+          ${item.status === "pending" && !signing ?
+            `<button class="fi-remove" onclick="removeFile(${item.id})" title="Remove">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>` : '<div style="width:26px"></div>'}
+        `;
+        list.appendChild(row);
+      }
+    }
+
+    // ═══ Batch signing ═══
+    async function handleSignAll() {
+      signing = true;
+      $("btnSign").classList.add("hidden");
+      $("progressSection").classList.remove("hidden");
+
+      const toSign = queue.filter(q => q.status === "pending");
+      let completed = 0;
+
+      $("progressCounter").textContent = `0 / ${toSign.length}`;
+      $("progressFill").style.width = "0%";
+
+      for (const item of toSign) {
+        item.status = "signing";
+        renderFileList();
+
+        const start = Date.now();
+        try {
+          const formData = new FormData();
+          formData.append("hashAlgo", CONFIG.HASH_ALGO);
+          formData.append("signAlgo", CONFIG.SIGN_ALGO);
+          formData.append("signAlgoParams", CONFIG.SIGN_ALGO_PARAMS);
+          formData.append("accountId", CONFIG.ACCOUNT_ID);
+          formData.append("schemaField", CONFIG.SCHEMA_FIELD);
+          formData.append("image", item.file);
+
+          const response = await fetch("/api/sign", {
+            method: "POST",
+            headers: { Accept: "application/json" },
+            body: formData,
+          });
+
+          if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.error_description || err.error || err.details || "Status " + response.status);
+          }
+
+          const data = await response.json();
+          const byteChars = atob(data.encoded_signed_content);
+          const byteArray = new Uint8Array(byteChars.length);
+          for (let i = 0; i < byteChars.length; i++) byteArray[i] = byteChars.charCodeAt(i);
+
+          item.signedBlob = new Blob([byteArray], { type: data.mime_type || item.file.type });
+          item.signedName = data.file_name || ("signed-" + item.file.name);
+          item.manifest = data.signed_manifest || null;
+          item.hashAlgo = data.hash_algo || CONFIG.HASH_ALGO;
+          item.signAlgo = data.sign_algo || CONFIG.SIGN_ALGO;
+          item.status = "done";
+          item.duration = ((Date.now() - start) / 1000).toFixed(1) + "s";
+        } catch (err) {
+          item.status = "error";
+          item.error = err.message;
+          item.duration = ((Date.now() - start) / 1000).toFixed(1) + "s";
+        }
+
+        completed++;
+        $("progressCounter").textContent = `${completed} / ${toSign.length}`;
+        $("progressFill").style.width = ((completed / toSign.length) * 100) + "%";
+        renderFileList();
+      }
+
+      // Done
+      signing = false;
+      $("progressLabel").textContent = "Batch complete";
+
+      const successes = queue.filter(q => q.status === "done").length;
+      const failures = queue.filter(q => q.status === "error").length;
+
+      $("successCount").textContent = successes;
+      $("failCount").textContent = failures;
+      $("resultsSummary").classList.remove("hidden");
+
+      if (successes > 0) {
+        $("verifyBar").classList.remove("hidden");
+        $("btnResults").classList.remove("hidden");
+        $("btnDownloadZip").textContent = successes === 1
+          ? " Download Signed Image"
+          : ` Download All (${successes}) as ZIP`;
+      }
+
+      // Build signing log
+      renderLog();
+    }
+
+    // ═══ Download ═══
+    async function handleDownloadZip() {
+      const signed = queue.filter(q => q.status === "done" && q.signedBlob);
+
+      if (signed.length === 1) {
+        // Single file — just download directly
+        const item = signed[0];
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(item.signedBlob);
+        a.download = item.signedName;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        return;
+      }
+
+      // Multiple files — create zip
+      const zip = new JSZip();
+      const usedNames = {};
+      for (const item of signed) {
+        let name = item.signedName;
+        if (usedNames[name]) {
+          const ext = name.lastIndexOf(".");
+          name = name.substring(0, ext) + "-" + (++usedNames[name]) + name.substring(ext);
+        }
+        usedNames[item.signedName] = (usedNames[item.signedName] || 0) + 1;
+        zip.file(name, item.signedBlob);
+      }
+
+      const blob = await zip.generateAsync({ type: "blob" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "signed-images-" + new Date().toISOString().slice(0, 10) + ".zip";
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    }
+
+    function downloadSingle(id) {
+      const item = queue.find(q => q.id === id);
+      if (!item || !item.signedBlob) return;
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(item.signedBlob);
+      a.download = item.signedName;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    }
+
+    // ═══ Signing log ═══
+    function renderLog() {
+      const completed = queue.filter(q => q.status === "done" || q.status === "error");
+      if (completed.length === 0) return;
+
+      $("logSection").classList.remove("hidden");
+      $("logCount").textContent = completed.length + (completed.length === 1 ? " file" : " files");
+
+      const body = $("logBody");
+      body.innerHTML = "";
+      for (const item of completed) {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td class="log-name">${esc(item.file.name)}</td>
+          <td style="font-family:var(--mono);font-size:11.5px;color:var(--sub)">${formatBytes(item.file.size)}</td>
+          <td>
+            <span class="log-status ${item.status}">${item.status === "done" ? "✓ Signed" : "✕ Failed"}</span>
+            ${item.status === "error" && item.error ? `<div style="font-size:10.5px;color:var(--red);margin-top:3px;max-width:200px;line-height:1.4;">${esc(item.error)}</div>` : ""}
+          </td>
+          <td style="font-family:var(--mono);font-size:11.5px;color:var(--sub)">${item.duration || "—"}</td>
+          <td>${item.status === "done" ? `<button class="log-dl" onclick="showManifest(${item.id})">Manifest</button>` : ""}</td>
+          <td>${item.status === "done" ? `<button class="log-dl" onclick="downloadSingle(${item.id})">Download</button>` : ""}</td>
+        `;
+        body.appendChild(tr);
+      }
+    }
+
+    // ═══ Reset ═══
+    function handleReset() {
+      for (const item of queue) {
+        if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
+      }
+      queue = [];
+      signing = false;
+
+      $("fileListSection").classList.add("hidden");
+      $("progressSection").classList.add("hidden");
+      $("resultsSummary").classList.add("hidden");
+      $("verifyBar").classList.add("hidden");
+      $("btnSign").classList.add("hidden");
+      $("btnResults").classList.add("hidden");
+      $("logSection").classList.add("hidden");
+      $("toolTabs").classList.add("hidden");
+      $("progressFill").style.width = "0%";
+
+      dropzone.classList.remove("hidden");
+      $("howItWorks").classList.remove("hidden");
+    }
+
+    // ═══ Helpers ═══
+    function formatBytes(b) {
+      if (b === 0) return "0 B";
+      const k = 1024, s = ["B", "KB", "MB", "GB"], i = Math.floor(Math.log(b) / Math.log(k));
+      return parseFloat((b / Math.pow(k, i)).toFixed(1)) + " " + s[i];
+    }
+
+    function esc(str) {
+      const d = document.createElement("div");
+      d.textContent = str;
+      return d.innerHTML;
+    }
+
+    // ═══ Manifest Modal ═══
+    function showManifest(id) {
+      const item = queue.find(q => q.id === id);
+      if (!item || item.status !== "done") return;
+
+      let manifestDisplay = "";
+      if (item.manifest) {
+        try {
+          const parsed = JSON.parse(item.manifest);
+          manifestDisplay = `<div class="modal-manifest">${esc(JSON.stringify(parsed, null, 2))}</div>`;
+        } catch {
+          manifestDisplay = `<div class="modal-manifest">${esc(item.manifest)}</div>`;
+        }
+      } else {
+        manifestDisplay = `<div class="modal-no-manifest">No manifest data was returned by the API for this image. The C2PA credential is embedded in the signed file — use <a href="https://contentcredentials.org/verify" target="_blank" style="color:var(--navy);font-weight:600;">contentcredentials.org/verify</a> or the Verify tab to inspect it.</div>`;
+      }
+
+      const modal = $("manifestModal");
+      modal.classList.remove("hidden");
+      modal.innerHTML = `
+        <div class="modal-overlay" onclick="closeManifest(event)">
+          <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-header">
+              <h3>C2PA Manifest — ${esc(item.file.name)}</h3>
+              <button class="modal-close" onclick="closeManifest()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+            <div class="modal-body">
+              <div class="modal-meta">
+                <div><div class="mm-label">Original file</div><div class="mm-value">${esc(item.file.name)}</div></div>
+                <div><div class="mm-label">Signed file</div><div class="mm-value">${esc(item.signedName)}</div></div>
+                <div><div class="mm-label">Hash algorithm</div><div class="mm-value">${esc(item.hashAlgo)}</div></div>
+                <div><div class="mm-label">Signature algorithm</div><div class="mm-value">RSASSA-PSS</div></div>
+                <div><div class="mm-label">Original size</div><div class="mm-value">${formatBytes(item.file.size)}</div></div>
+                <div><div class="mm-label">Signed size</div><div class="mm-value">${formatBytes(item.signedBlob.size)}</div></div>
+              </div>
+              ${manifestDisplay}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function closeManifest(e) {
+      if (e && e.target !== e.currentTarget) return;
+      $("manifestModal").classList.add("hidden");
+      $("manifestModal").innerHTML = "";
+    }
+
+    // Close modal on Escape key
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !$("manifestModal").classList.contains("hidden")) {
+        closeManifest();
+      }
+    });
+
+    // ═══ Tabs ═══
+    function switchTab(tab) {
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+      document.querySelector(`.tab-btn[onclick="switchTab('${tab}')"]`).classList.add("active");
+      $("tabCompare").classList.toggle("hidden", tab !== "compare");
+      $("tabVerify").classList.toggle("hidden", tab !== "verify");
+    }
+
+    // ═══ Before/After Comparison ═══
+    function populateCompareSelect() {
+      const signed = queue.filter(q => q.status === "done");
+      const select = $("compareSelect");
+      select.innerHTML = "";
+      for (const item of signed) {
+        const opt = document.createElement("option");
+        opt.value = item.id;
+        opt.textContent = item.file.name;
+        select.appendChild(opt);
+      }
+      if (signed.length > 0) renderCompare();
+    }
+
+    function renderCompare() {
+      const id = parseInt($("compareSelect").value);
+      const item = queue.find(q => q.id === id);
+      if (!item || item.status !== "done") {
+        $("compareContent").innerHTML = '<div class="compare-empty">Select a signed image above</div>';
+        return;
+      }
+
+      const signedUrl = URL.createObjectURL(item.signedBlob);
+
+      $("compareContent").innerHTML = `
+        <div class="compare-container">
+          <div class="compare-panel">
+            <div class="compare-panel-header original">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+              Original
+            </div>
+            <div class="compare-panel-body">
+              <img src="${item.previewUrl}" alt="Original">
+            </div>
+            <div class="compare-meta">
+              <span>${esc(item.file.name)}</span>
+              <span>${formatBytes(item.file.size)}</span>
+            </div>
+            <div style="padding:8px 14px; border-top:1px solid var(--border-light);">
+              <span class="compare-badge none">No C2PA</span>
+            </div>
+          </div>
+          <div class="compare-panel">
+            <div class="compare-panel-header signed">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
+              Signed
+            </div>
+            <div class="compare-panel-body">
+              <img src="${signedUrl}" alt="Signed">
+            </div>
+            <div class="compare-meta">
+              <span>${esc(item.signedName)}</span>
+              <span>${formatBytes(item.signedBlob.size)}</span>
+            </div>
+            <div style="padding:8px 14px; border-top:1px solid var(--border-light); display:flex; align-items:center; justify-content:space-between;">
+              <span class="compare-badge c2pa">C2PA Signed ✓</span>
+              <span style="font-size:10px; font-family:var(--mono); color:var(--sub);">+${formatBytes(item.signedBlob.size - item.file.size)} metadata</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // ═══ Drag-to-Verify ═══
+    const verifyDrop = $("verifyDrop");
+    const verifyInput = $("verifyInput");
+
+    verifyDrop.addEventListener("dragover", (e) => { e.preventDefault(); verifyDrop.classList.add("over"); $("verifyDropTitle").textContent = "Drop to verify"; });
+    verifyDrop.addEventListener("dragleave", () => { verifyDrop.classList.remove("over"); $("verifyDropTitle").textContent = "Drop a signed image here to verify"; });
+    verifyDrop.addEventListener("drop", (e) => {
+      e.preventDefault(); verifyDrop.classList.remove("over");
+      $("verifyDropTitle").textContent = "Drop a signed image here to verify";
+      if (e.dataTransfer.files[0]) verifyFile(e.dataTransfer.files[0]);
+    });
+    verifyDrop.addEventListener("click", () => verifyInput.click());
+    verifyInput.addEventListener("change", () => { if (verifyInput.files[0]) verifyFile(verifyInput.files[0]); verifyInput.value = ""; });
+
+    async function verifyFile(file) {
+      const result = $("verifyResult");
+      result.classList.remove("hidden");
+
+      // Read file bytes and search for C2PA marker
+      const buffer = await file.arrayBuffer();
+      const bytes = new Uint8Array(buffer);
+      const text = new TextDecoder("ascii", { fatal: false }).decode(bytes);
+
+      // C2PA manifests contain these markers in the binary
+      const hasC2PA = text.includes("c2pa") || text.includes("C2PA") ||
+                      text.includes("jumbf") || text.includes("cai") ||
+                      text.includes("contentauth");
+
+      // Try to find a JSON manifest block
+      let manifestJson = null;
+      const c2paIdx = text.indexOf('"active_manifest"');
+      if (c2paIdx === -1) {
+        // Try another common field
+        const claimIdx = text.indexOf('"claim_generator"');
+        if (claimIdx !== -1) {
+          manifestJson = extractJson(text, claimIdx);
+        }
+      } else {
+        manifestJson = extractJson(text, c2paIdx);
+      }
+
+      if (hasC2PA) {
+        result.innerHTML = `
+          <div class="verify-result">
+            <div class="verify-result-header">
+              <div class="vr-icon found">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#15803D" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
+              </div>
+              <div>
+                <div class="vr-title found">C2PA Content Credential Detected</div>
+                <div style="font-size:12px;color:var(--sub);margin-top:2px;">${esc(file.name)} · ${formatBytes(file.size)}</div>
+              </div>
+            </div>
+            ${manifestJson ? `
+              <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:6px;">Embedded Manifest</div>
+              <div class="verify-manifest">${esc(manifestJson)}</div>
+            ` : `
+              <div style="font-size:12.5px;color:var(--sub);line-height:1.6;">
+                C2PA markers found in the file binary. For full manifest details and validation, use an external verifier.
+              </div>
+            `}
+            <div class="verify-links">
+              For full cryptographic validation: <a href="https://contentcredentials.org/verify" target="_blank" rel="noopener">contentcredentials.org/verify</a> · <a href="https://c2paviewer.com" target="_blank" rel="noopener">C2PA Viewer</a>
+            </div>
+          </div>
+        `;
+      } else {
+        result.innerHTML = `
+          <div class="verify-result">
+            <div class="verify-result-header">
+              <div class="vr-icon none">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+              </div>
+              <div>
+                <div class="vr-title none">No Content Credential Found</div>
+                <div style="font-size:12px;color:var(--sub);margin-top:2px;">${esc(file.name)} · ${formatBytes(file.size)}</div>
+              </div>
+            </div>
+            <div style="font-size:12.5px;color:var(--sub);line-height:1.6;margin-top:8px;">
+              This image does not appear to contain a C2PA manifest. It may not have been signed, or the signature may have been stripped during processing (e.g., by social media platforms, image editors, or screenshot tools).
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    function extractJson(text, startHint) {
+      // Walk backward to find the opening brace
+      let start = startHint;
+      while (start > 0 && text[start] !== '{') start--;
+      if (text[start] !== '{') return null;
+
+      // Walk forward counting braces
+      let depth = 0;
+      let end = start;
+      for (let i = start; i < text.length && i < start + 5000; i++) {
+        if (text[i] === '{') depth++;
+        else if (text[i] === '}') { depth--; if (depth === 0) { end = i + 1; break; } }
+      }
+      if (depth !== 0) return null;
+
+      try {
+        const raw = text.substring(start, end);
+        const parsed = JSON.parse(raw);
+        return JSON.stringify(parsed, null, 2);
+      } catch {
+        return null;
+      }
+    }
+
+    // ═══ Show tabs after signing ═══
+    const _origRenderLog = renderLog;
+    renderLog = function() {
+      _origRenderLog();
+      const signed = queue.filter(q => q.status === "done");
+      if (signed.length > 0) {
+        $("toolTabs").classList.remove("hidden");
+        populateCompareSelect();
+      }
+    };
+  </script>
+</body>
+</html>
