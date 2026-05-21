@@ -544,10 +544,7 @@
   <script>
     const CONFIG = {
       ACCOUNT_ID: "d845c3f6-6b61-46d0-af70-67ef7ce26b71",
-      HASH_ALGO: "SHA256",
-      SIGN_ALGO: "1.2.840.113549.1.1.10",
-      SIGN_ALGO_PARAMS: "MTIzNDQ=",
-      SCHEMA_FIELD: "author,publisher",
+      ROLE: "publisher",
     };
 
     const ACCEPTED = ["image/jpeg", "image/png"];
@@ -674,13 +671,9 @@
         const start = Date.now();
         try {
           const formData = new FormData();
-          formData.append("hashAlgo", CONFIG.HASH_ALGO);
-          formData.append("signAlgo", CONFIG.SIGN_ALGO);
-          formData.append("signAlgoParams", CONFIG.SIGN_ALGO_PARAMS);
           formData.append("accountId", CONFIG.ACCOUNT_ID);
-          formData.append("schemaField", CONFIG.SCHEMA_FIELD);
-          formData.append("image", item.file);
-
+          formData.append("role", CONFIG.ROLE);
+          formData.append("file", item.file);        
           const response = await fetch("/api/sign", {
             method: "POST",
             headers: { Accept: "application/json" },
