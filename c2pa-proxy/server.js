@@ -10,43 +10,38 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 
 
 // ═══════════════════════════════════════════════════════
 //  CONFIGURATION — All secrets come from env variables
-//
-//  DIGICERT_CERT_BASE64  — base64-encoded .p12 certificate
-//  DIGICERT_CERT_PASSWORD — password for the .p12 certificate
 // ═══════════════════════════════════════════════════════
 const DIGICERT_URL = "https://clientauth.one.digicert.com/documentmanager/api/c2pa/v1/sign";
 
-if (!process.env.DIGICERT_CERT_BASE64 || !process.env.DIGICERT_CERT_PASSWORD) {
+// Load the client certificate from a base64-encoded environment variable
+const pfx = Buffer.from(process.env.DIGICERT_CERT_BASE64 || "", "base64");
+const passphrase = process.env.DIGICERT_CERT_PASSWORD;
+
+if (!process.env.DIGICERT_CERT_BASE64 || !passphrase) {
   console.error("ERROR: Missing environment variables.");
-  console.error("  DIGICERT_CERT_BASE64  — base64-encoded .p12 certificate");
+  console.error("  DIGICERT_CERT_BASE64   — base64-encoded .p12 certificate");
   console.error("  DIGICERT_CERT_PASSWORD — password for the .p12 certificate");
   process.exit(1);
 }
 
-const pfx = Buffer.from(process.env.DIGICERT_CERT_BASE64, "base64");
-const passphrase = process.env.DIGICERT_CERT_PASSWORD;
+// Create an HTTPS agent that presents the client cert on every request
 const agent = new https.Agent({ pfx, passphrase });
 
-// Serve frontend
+// Serve the HTML frontend from the /public folder
 app.use(express.static(path.join(__dirname, "public")));
 
-// Signing proxy
-app.post("/api/sign", upload.single("image"), async (req, res) => {
+// Proxy endpoint — browser sends file here, we forward to DigiCert with mTLS
+app.post("/api/sign", upload.single("file"), async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ error: "No image provided" });
+    if (!req.file) return res.status(400).json({ error: "No file provided" });
 
     const form = new FormData();
-    form.append("hashAlgo", req.body.hashAlgo || "SHA256");
-    form.append("signAlgo", req.body.signAlgo || "1.2.840.113549.1.1.10");
-    form.append("signAlgoParams", req.body.signAlgoParams || "MTIzNDQ=");
     form.append("accountId", req.body.accountId);
-    form.append("schemaField", req.body.schemaField || "author,publisher");
-    form.append("image", req.file.buffer, {
+    form.append("role", req.body.role || "publisher");
+    form.append("file", req.file.buffer, {
       filename: req.file.originalname,
       contentType: req.file.mimetype,
     });
-
-    console.log(`Signing: ${req.file.originalname} (${req.file.size} bytes)`);
 
     const response = await fetch(DIGICERT_URL, {
       method: "POST",
@@ -56,13 +51,8 @@ app.post("/api/sign", upload.single("image"), async (req, res) => {
     });
 
     const data = await response.json();
+    if (!response.ok) return res.status(response.status).json(data);
 
-    if (!response.ok) {
-      console.error(`DigiCert error (${response.status}):`, data);
-      return res.status(response.status).json(data);
-    }
-
-    console.log(`Signed successfully: ${data.file_name}`);
     res.json(data);
   } catch (err) {
     console.error("Signing error:", err);
@@ -71,7 +61,4 @@ app.post("/api/sign", upload.single("image"), async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`C2PA Signing Tool running on http://localhost:${PORT}`);
-  console.log(`DigiCert endpoint: ${DIGICERT_URL}`);
-});
+app.listen(PORT, () => console.log(`C2PA proxy running on http://localhost:${PORT}`));
