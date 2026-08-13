@@ -14,6 +14,7 @@
       --text: #1A1A1A; --sub: #9CA3AF;
       --green: #15803D; --green-bg: #F0FAF4; --green-border: #A7DFC2;
       --red: #DC2626; --red-dark: #991B1B; --red-bg: #FEF2F2; --red-border: #FECACA;
+      --amber: #B45309; --amber-bg: #FFFBEB; --amber-border: #FDE68A;
       --blue-bg: #EDF5FA; --blue-border: #BDD9EC;
       --font: 'Source Sans 3', 'Source Sans Pro', -apple-system, sans-serif;
       --mono: 'IBM Plex Mono', monospace;
@@ -80,10 +81,21 @@
       background: #FAFBFC; border: 1px solid var(--border-light); border-radius: 8px;
       margin-bottom: 6px; transition: all 0.15s;
     }
-    .file-item img {
+    .file-item img, .file-item video {
       width: 36px; height: 36px; border-radius: 5px; object-fit: cover;
-      border: 1px solid var(--border-light); flex-shrink: 0;
+      border: 1px solid var(--border-light); flex-shrink: 0; background: #fff;
     }
+    .fi-thumb {
+      width: 36px; height: 36px; border-radius: 5px; flex-shrink: 0;
+      border: 1px solid var(--border-light); background: #F0F2F4;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--mono); font-size: 8.5px; font-weight: 500;
+      color: #6B7280; letter-spacing: -0.02em; text-transform: uppercase;
+    }
+    .fi-thumb.video { background: #EEF2FF; color: #4338CA; }
+    .fi-thumb.audio { background: #FDF2F8; color: #9D174D; }
+    .fi-thumb.vector { background: #ECFDF5; color: #047857; }
+    .fi-thumb.document { background: #FEF2F2; color: #B91C1C; }
     .file-item .fi-info { flex: 1; min-width: 0; }
     .file-item .fi-name {
       font-size: 13px; font-weight: 600;
@@ -94,6 +106,7 @@
     .fi-status.pending { color: var(--sub); }
     .fi-status.signing { color: var(--navy); }
     .fi-status.done { color: var(--green); }
+    .fi-status.warning { color: var(--amber); }
     .fi-status.error { color: var(--red); }
     .file-item .fi-remove {
       width: 26px; height: 26px; border-radius: 5px; border: 1px solid transparent;
@@ -132,10 +145,59 @@
       flex: 1; padding: 14px 16px; border-radius: 8px; text-align: center;
     }
     .result-stat.success { background: var(--green-bg); border: 1px solid var(--green-border); }
+    .result-stat.skipped { background: var(--amber-bg); border: 1px solid var(--amber-border); }
     .result-stat.failed { background: var(--red-bg); border: 1px solid var(--red-border); }
     .result-stat .stat-num { font-size: 24px; font-weight: 700; line-height: 1; margin-bottom: 4px; }
     .result-stat.success .stat-num { color: var(--green); }
+    .result-stat.skipped .stat-num { color: var(--amber); }
     .result-stat.failed .stat-num { color: var(--red); }
+
+    /* Per-file explanation block */
+    .fi-explain {
+      margin-top: 5px; padding: 7px 9px; border-radius: 6px;
+      font-size: 11.5px; line-height: 1.5;
+    }
+    .fi-explain.warning { background: var(--amber-bg); border: 1px solid var(--amber-border); color: var(--amber); }
+    .fi-explain.error { background: var(--red-bg); border: 1px solid var(--red-border); color: var(--red-dark); }
+    .fi-explain .fi-action { display: block; margin-top: 3px; font-weight: 600; }
+    .fi-explain .fi-toggle {
+      display: inline-block; margin-top: 5px; background: none; border: none;
+      padding: 0; font-family: var(--mono); font-size: 10px; color: inherit;
+      opacity: 0.75; cursor: pointer; text-decoration: underline; text-underline-offset: 2px;
+    }
+    .fi-explain .fi-detail {
+      margin-top: 5px; padding: 6px 8px; border-radius: 4px;
+      background: rgba(0,0,0,0.05); font-family: var(--mono);
+      font-size: 10.5px; line-height: 1.5; word-break: break-word;
+    }
+
+    /* Pre-flight flag on a file we expect to be declined */
+    .fi-flag {
+      display: inline-flex; align-items: center; gap: 3px; margin-left: 6px;
+      padding: 1px 6px; border-radius: 4px; background: var(--amber-bg);
+      border: 1px solid var(--amber-border); color: var(--amber);
+      font-size: 9.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
+      vertical-align: 1px;
+    }
+
+    /* Unsupported-format notice */
+    .warn-bar {
+      display: flex; align-items: flex-start; gap: 10px; padding: 14px 16px;
+      background: var(--amber-bg); border: 1px solid var(--amber-border);
+      border-radius: 8px; margin-bottom: 20px; font-size: 13px; color: var(--amber);
+      line-height: 1.55;
+    }
+    .warn-bar svg { flex-shrink: 0; margin-top: 1px; }
+    .warn-bar ul { margin: 6px 0 0 0; padding-left: 16px; }
+    .warn-bar li { font-family: var(--mono); font-size: 11.5px; }
+    .warn-bar.hard { background: var(--red-bg); border-color: var(--red-border); color: var(--red-dark); }
+    .warn-copy {
+      margin-top: 8px; padding: 5px 10px; border-radius: 6px;
+      border: 1px solid currentColor; background: none; color: inherit;
+      font-family: var(--font); font-size: 11.5px; font-weight: 600; cursor: pointer;
+      display: inline-flex; align-items: center; gap: 5px; opacity: 0.85;
+    }
+    .warn-copy:hover { opacity: 1; }
     .result-stat .stat-label { font-size: 11px; font-weight: 500; color: var(--sub); text-transform: uppercase; letter-spacing: 0.05em; }
 
     /* Verify bar */
@@ -206,6 +268,7 @@
     .log-table tr:last-child td { border-bottom: none; }
     .log-table .log-status { font-weight: 600; font-size: 11.5px; }
     .log-table .log-status.done { color: var(--green); }
+    .log-table .log-status.warning { color: var(--amber); }
     .log-table .log-status.error { color: var(--red); }
     .log-table .log-name { font-weight: 500; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .log-table .log-dl {
@@ -269,9 +332,18 @@
       padding: 12px; display: flex; align-items: center; justify-content: center;
       min-height: 200px; background: #F9F9F9;
     }
-    .compare-panel-body img {
+    .compare-panel-body img, .compare-panel-body video {
       max-width: 100%; max-height: 300px; border-radius: 4px;
-      object-fit: contain;
+      object-fit: contain; background: #fff;
+    }
+    .compare-panel-body audio { width: 100%; }
+    .compare-noprev {
+      text-align: center; color: var(--sub); font-size: 12px; line-height: 1.6;
+    }
+    .compare-noprev .np-ext {
+      display: inline-block; margin-bottom: 8px; padding: 10px 14px;
+      border-radius: 8px; background: #fff; border: 1px solid var(--border-light);
+      font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--navy);
     }
     .compare-meta {
       padding: 10px 14px; border-top: 1px solid var(--border-light);
@@ -396,30 +468,30 @@
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
               </svg>
             </div>
-            <h3 id="dropTitle">Drag and drop images here</h3>
+            <h3 id="dropTitle">Drag and drop files here</h3>
             <p>or <a id="browseLink">browse files</a> — select multiple</p>
-            <div class="formats"><span>JPG</span><span class="dot"></span><span>PNG</span><span class="dot"></span><span>Max 20 MB each</span></div>
-            <input type="file" id="fileInput" accept=".jpg,.jpeg,.png" multiple style="display:none">
+            <div class="formats" id="limitHint"><span>Any file type</span><span class="dot"></span><span>Max 512 MB each</span></div>
+            <input type="file" id="fileInput" multiple style="display:none">
           </div>
 
           <!-- File list -->
           <div class="hidden" id="fileListSection">
             <div class="file-list-header">
-              <span class="count" id="fileCount">0 images</span>
+              <span class="count" id="fileCount">0 files</span>
               <span class="total" id="fileTotal"></span>
               <button onclick="clearAll()">Clear all</button>
             </div>
             <div class="file-list" id="fileList"></div>
             <button class="btn-add" onclick="addMore()">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              Add more images
+              Add more files
             </button>
           </div>
 
           <!-- Progress -->
           <div class="progress-section hidden" id="progressSection">
             <div class="progress-header">
-              <span class="label" id="progressLabel">Signing images…</span>
+              <span class="label" id="progressLabel">Signing files…</span>
               <span class="counter" id="progressCounter">0 / 0</span>
             </div>
             <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
@@ -431,16 +503,26 @@
               <div class="stat-num" id="successCount">0</div>
               <div class="stat-label">Signed</div>
             </div>
+            <div class="result-stat skipped hidden" id="skipStat">
+              <div class="stat-num" id="skipCount">0</div>
+              <div class="stat-label">Skipped</div>
+            </div>
             <div class="result-stat failed">
               <div class="stat-num" id="failCount">0</div>
               <div class="stat-label">Failed</div>
             </div>
           </div>
 
+          <!-- Unsupported format notice -->
+          <div class="warn-bar hidden" id="warnBar">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#B45309" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <div id="warnBarText"></div>
+          </div>
+
           <!-- Verify bar -->
           <div class="verify-bar hidden" id="verifyBar">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#003B5C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
-            <span>Verify signed images at <a href="https://contentcredentials.org/verify" target="_blank" rel="noopener">contentcredentials.org/verify</a> or <a href="https://c2paviewer.com" target="_blank" rel="noopener">C2PA Viewer</a></span>
+            <span>Verify signed files at <a href="https://contentcredentials.org/verify" target="_blank" rel="noopener">contentcredentials.org/verify</a> or <a href="https://c2paviewer.com" target="_blank" rel="noopener">C2PA Viewer</a></span>
           </div>
 
           <!-- Buttons -->
@@ -453,7 +535,7 @@
           <div class="btn-row hidden" id="btnResults">
             <button class="btn-primary green" id="btnDownloadZip" onclick="handleDownloadZip()">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              Download All as ZIP
+              <span id="btnDownloadLabel">Download All as ZIP</span>
             </button>
             <button class="btn-secondary" onclick="handleReset()">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
@@ -467,15 +549,15 @@
       <div class="how-it-works" id="howItWorks">
         <div class="how-card">
           <div class="how-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#003B5C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
-          <h4>Upload</h4><p>Drop one or many JPG/PNG images at once</p>
+          <h4>Upload</h4><p>Drop one file or a mixed batch of any kind</p>
         </div>
         <div class="how-card">
           <div class="how-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#003B5C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg></div>
-          <h4>Batch Sign</h4><p>Each image is signed sequentially via DigiCert C2PA</p>
+          <h4>Batch Sign</h4><p>Each file is signed sequentially via DigiCert C2PA</p>
         </div>
         <div class="how-card">
           <div class="how-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#003B5C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
-          <h4>Download</h4><p>Get all signed images in a single ZIP file</p>
+          <h4>Download</h4><p>Get every signed file in a single ZIP</p>
         </div>
       </div>
 
@@ -509,11 +591,11 @@
         <!-- Compare panel -->
         <div class="tab-panel" id="tabCompare">
           <div class="compare-select">
-            <label>Image:</label>
+            <label>File:</label>
             <select id="compareSelect" onchange="renderCompare()"></select>
           </div>
           <div id="compareContent">
-            <div class="compare-empty">Sign images to see before/after comparison</div>
+            <div class="compare-empty">Sign files to see the before/after comparison</div>
           </div>
         </div>
 
@@ -523,9 +605,9 @@
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:10px">
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/>
             </svg>
-            <h3 id="verifyDropTitle">Drop a signed image here to verify</h3>
-            <p>We'll check if it contains a valid C2PA manifest</p>
-            <input type="file" id="verifyInput" accept=".jpg,.jpeg,.png" style="display:none">
+            <h3 id="verifyDropTitle">Drop a signed file here to verify</h3>
+            <p>Checks the file for an embedded C2PA manifest</p>
+            <input type="file" id="verifyInput" style="display:none">
           </div>
           <div class="hidden" id="verifyResult"></div>
         </div>
@@ -542,29 +624,115 @@
   <div class="hidden" id="manifestModal"></div>
 
   <script>
+    // Defaults only. /api/config overrides all of this at load, so adding a
+    // format or raising the size ceiling is a server-side change.
     const CONFIG = {
       ACCOUNT_ID: "d845c3f6-6b61-46d0-af70-67ef7ce26b71",
       ROLE: "publisher",
+      MAX_SIZE: 512 * 1024 * 1024,
+      FORMATS: [],
+      SUPPORT: "the Customer Zero team",
     };
 
-    const ACCEPTED = ["image/jpeg", "image/png"];
-    const MAX_SIZE = 20 * 1024 * 1024;
+    // ext -> { label, message, action }. Populated from /api/declined, so the
+    // second person to drop a TIFF gets warned before waiting on the upload.
+    let DECLINED = new Map();
 
-    // Each item: { id, file, previewUrl, status: 'pending'|'signing'|'done'|'error', signedBlob, signedName, error, duration }
+    // ext -> { kind, label }. Used for icons, labels and previews only.
+    // A file with an unlisted extension still uploads; DigiCert decides.
+    let FORMAT_BY_EXT = new Map();
+
+    // Blob is only pulled down when a preview or a ZIP needs the bytes.
+    const PREVIEW_LIMIT = 50 * 1024 * 1024;
+    const ZIP_LIMIT = 400 * 1024 * 1024;
+
+    // Each item: { id, file, kind, label, previewUrl, status:
+    //   'pending'|'signing'|'done'|'warning'|'error', signedUrl, signedName,
+    //   signedSize, error, warning, duration }
     let queue = [];
     let signing = false;
     let idCounter = 0;
 
     const $ = (id) => document.getElementById(id);
 
+    (async function loadConfig() {
+      try {
+        const res = await fetch("/api/config");
+        if (!res.ok) return;
+        const cfg = await res.json();
+        if (cfg.accountId) CONFIG.ACCOUNT_ID = cfg.accountId;
+        if (cfg.role) CONFIG.ROLE = cfg.role;
+        if (cfg.maxFileMb) {
+          CONFIG.MAX_SIZE = cfg.maxFileMb * 1024 * 1024;
+          renderLimitHint(cfg);
+        }
+        if (cfg.supportContact) CONFIG.SUPPORT = cfg.supportContact;
+        if (Array.isArray(cfg.formats) && cfg.formats.length) {
+          CONFIG.FORMATS = cfg.formats;
+          FORMAT_BY_EXT = new Map(cfg.formats.map(f => [f.ext, f]));
+        }
+      } catch { /* defaults stand */ }
+      loadDeclined();
+    })();
+
+    async function loadDeclined() {
+      try {
+        const res = await fetch("/api/declined");
+        if (!res.ok) return;
+        const { declined } = await res.json();
+        DECLINED = new Map((declined || []).map(d => [d.ext, d]));
+      } catch { /* pre-flight warnings are a nicety, not a requirement */ }
+    }
+
+    function renderLimitHint(cfg) {
+      // Deliberately no format list. What DigiCert signs changes, and a stale
+      // list on the landing page is worse than no list at all.
+      $("limitHint").innerHTML =
+        `<span>Any file type</span><span class="dot"></span><span>Max ${cfg.maxFileMb} MB each</span>`;
+    }
+
+    // ═══ Kind detection ═══
+    function extOf(name) {
+      const i = String(name || "").lastIndexOf(".");
+      return i === -1 ? "" : name.slice(i + 1).toLowerCase();
+    }
+
+    function describe(file) {
+      const ext = extOf(file.name);
+      const known = FORMAT_BY_EXT.get(ext);
+      if (known) return { kind: known.kind, label: known.label };
+      // Fall back to whatever the browser reported, then to the extension.
+      const type = file.type || "";
+      if (type.startsWith("video/")) return { kind: "video", label: ext.toUpperCase() || "VIDEO" };
+      if (type.startsWith("audio/")) return { kind: "audio", label: ext.toUpperCase() || "AUDIO" };
+      if (type === "image/svg+xml") return { kind: "vector", label: "SVG" };
+      if (type.startsWith("image/")) return { kind: "image", label: ext.toUpperCase() || "IMAGE" };
+      if (type === "application/pdf") return { kind: "document", label: "PDF" };
+      return { kind: "other", label: ext.toUpperCase() || "FILE" };
+    }
+
+    // Images and SVG render in an <img>, video in a <video>. Everything else
+    // gets a labelled tile.
+    function canPreview(kind) { return kind === "image" || kind === "vector" || kind === "video"; }
+
+    function thumbHtml(item) {
+      if (item.kind === "video" && item.previewUrl) {
+        return `<video src="${item.previewUrl}" muted preload="metadata"></video>`;
+      }
+      if (canPreview(item.kind) && item.previewUrl) {
+        return `<img src="${item.previewUrl}" alt="">`;
+      }
+      return `<div class="fi-thumb ${item.kind}">${esc(item.label.slice(0, 4))}</div>`;
+    }
+
     // ═══ Dropzone ═══
     const dropzone = $("dropzone");
     const fileInput = $("fileInput");
 
     dropzone.addEventListener("dragover", (e) => { e.preventDefault(); dropzone.classList.add("over"); $("dropTitle").textContent = "Drop to upload"; });
-    dropzone.addEventListener("dragleave", () => { dropzone.classList.remove("over"); $("dropTitle").textContent = "Drag and drop images here"; });
+    dropzone.addEventListener("dragleave", () => { dropzone.classList.remove("over"); $("dropTitle").textContent = "Drag and drop files here"; });
     dropzone.addEventListener("drop", (e) => {
-      e.preventDefault(); dropzone.classList.remove("over"); $("dropTitle").textContent = "Drag and drop images here";
+      e.preventDefault(); dropzone.classList.remove("over"); $("dropTitle").textContent = "Drag and drop files here";
       addFiles(e.dataTransfer.files);
     });
     dropzone.addEventListener("click", () => fileInput.click());
@@ -576,22 +744,118 @@
     // ═══ File management ═══
     function addFiles(fileList) {
       let added = 0;
+      const rejected = [];
       for (const file of fileList) {
-        if (!ACCEPTED.includes(file.type)) continue;
-        if (file.size > MAX_SIZE) continue;
+        // No type gate. Every file is offered to DigiCert.
+        const { kind, label } = describe(file);
+        if (file.size > CONFIG.MAX_SIZE) {
+          rejected.push(`${file.name} — ${formatBytes(file.size)}`);
+          continue;
+        }
         queue.push({
           id: ++idCounter,
           file,
-          previewUrl: URL.createObjectURL(file),
+          kind,
+          label,
+          previewUrl: canPreview(kind) ? URL.createObjectURL(file) : null,
           status: "pending",
-          signedBlob: null,
+          signedUrl: null,
           signedName: null,
+          signedSize: null,
           error: null,
+          warning: null,
           duration: null,
         });
         added++;
       }
+      if (rejected.length) {
+        showWarn(
+          `Too large to upload, limit is ${formatBytes(CONFIG.MAX_SIZE)}:`,
+          rejected
+        );
+      }
       if (added > 0) renderFileList();
+    }
+
+    function showWarn(headline, lines, opts = {}) {
+      const bar = $("warnBar");
+      bar.classList.remove("hidden");
+      bar.classList.toggle("hard", !!opts.hard);
+      $("warnBarText").innerHTML =
+        `<strong>${esc(headline)}</strong>` +
+        (lines && lines.length
+          ? `<ul>${lines.map(l => `<li>${esc(l)}</li>`).join("")}</ul>`
+          : "") +
+        (opts.copyReport
+          ? `<button class="warn-copy" onclick="copyReport()">
+               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+               <span id="copyReportLabel">Copy details to send on</span>
+             </button>`
+          : "");
+    }
+
+    // Puts everything a support request needs on the clipboard, so nobody has
+    // to describe what they saw or go looking for a server log.
+    function copyReport() {
+      const rows = queue.filter(q => q.status === "warning" || q.status === "error");
+      const report = [
+        "DigiCert C2PA signing report",
+        new Date().toISOString(),
+        "",
+        ...rows.map(q => [
+          `File:    ${q.file.name} (${q.label}, ${formatBytes(q.file.size)})`,
+          `Result:  ${q.status === "warning" ? "not supported" : "failed"}${q.code ? " [" + q.code + "]" : ""}`,
+          `Message: ${q.warning || q.error || "—"}`,
+          `Details: ${q.detail || "—"}`,
+          "",
+        ].join("\n")),
+      ].join("\n");
+
+      const done = () => {
+        const label = $("copyReportLabel");
+        if (label) {
+          label.textContent = "Copied";
+          setTimeout(() => { label.textContent = "Copy details to send on"; }, 2500);
+        }
+      };
+
+      if (navigator.clipboard?.writeText) {
+        navigator.clipboard.writeText(report).then(done).catch(() => fallbackCopy(report, done));
+      } else {
+        fallbackCopy(report, done);
+      }
+    }
+
+    function fallbackCopy(text, done) {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand("copy"); done(); } catch { /* nothing else to try */ }
+      document.body.removeChild(ta);
+    }
+
+    // Shared renderer for the amber and red blocks under a file row.
+    function explainHtml(item) {
+      const isWarn = item.status === "warning";
+      const msg = isWarn ? item.warning : item.error;
+      if (!msg) return "";
+      return `
+        <div class="fi-explain ${isWarn ? "warning" : "error"}">
+          ${esc(msg)}
+          ${item.action ? `<span class="fi-action">${esc(item.action)}</span>` : ""}
+          ${item.detail && item.detail !== msg ? `
+            <button class="fi-toggle" onclick="toggleDetail(${item.id})">What DigiCert said</button>
+            <div class="fi-detail hidden" id="detail-${item.id}">${esc(item.detail)}</div>
+          ` : ""}
+        </div>`;
+    }
+
+    function toggleDetail(id) {
+      const el = $("detail-" + id);
+      if (el) el.classList.toggle("hidden");
     }
 
     function removeFile(id) {
@@ -613,7 +877,7 @@
       const total = queue.length;
       const totalSize = queue.reduce((s, q) => s + q.file.size, 0);
 
-      $("fileCount").textContent = total + (total === 1 ? " image" : " images");
+      $("fileCount").textContent = total + (total === 1 ? " file" : " files");
       $("fileTotal").textContent = formatBytes(totalSize);
 
       // Show sign button only if there are pending items and not currently signing
@@ -630,17 +894,23 @@
         const row = document.createElement("div");
         row.className = "file-item";
         if (item.status === "error") row.style.borderColor = "var(--red-border)";
+        if (item.status === "warning") row.style.borderColor = "var(--amber-border)";
         row.innerHTML = `
-          <img src="${item.previewUrl}" alt="">
+          ${thumbHtml(item)}
           <div class="fi-info">
-            <div class="fi-name">${esc(item.file.name)}</div>
-            <div class="fi-meta">${formatBytes(item.file.size)} · ${item.file.type === "image/png" ? "PNG" : "JPEG"}</div>
-            ${item.status === "error" && item.error ? `<div style="font-size:11px;color:var(--red);margin-top:3px;line-height:1.4;">${esc(item.error)}</div>` : ""}
+            <div class="fi-name">${esc(item.file.name)}${
+              item.status === "pending" && DECLINED.has(extOf(item.file.name))
+                ? '<span class="fi-flag" title="DigiCert declined this format earlier in this session">likely unsupported</span>'
+                : ""
+            }</div>
+            <div class="fi-meta">${formatBytes(item.file.size)} · ${esc(item.label)}</div>
+            ${explainHtml(item)}
           </div>
           <div class="fi-status ${item.status}">
             ${item.status === "pending" ? "Pending" :
               item.status === "signing" ? '<div class="mini-spinner"></div> Signing…' :
               item.status === "done" ? '✓ Signed' :
+              item.status === "warning" ? '⚠ Not supported' :
               '✕ Failed'}
           </div>
           ${item.status === "pending" && !signing ?
@@ -680,26 +950,47 @@
             body: formData,
           });
 
-          if (!response.ok) {
-            const err = await response.json().catch(() => ({}));
-            throw new Error(err.error_description || err.error || err.details || "Status " + response.status);
+          const data = await response.json().catch(() => ({}));
+
+          if (!response.ok || data.result === "error") {
+            const failure = new Error(
+              data.message || data.error_description || data.error || "Signing failed on status " + response.status
+            );
+            failure.code = data.code || "unknown";
+            failure.action = data.action || `Retry once. If it fails again, tell ${CONFIG.SUPPORT}.`;
+            failure.detail = data.detail || data.details || null;
+            throw failure;
           }
 
-          const data = await response.json();
-          const byteChars = atob(data.encoded_signed_content);
-          const byteArray = new Uint8Array(byteChars.length);
-          for (let i = 0; i < byteChars.length; i++) byteArray[i] = byteChars.charCodeAt(i);
-
-          item.signedBlob = new Blob([byteArray], { type: data.mime_type || item.file.type });
-          item.signedName = data.file_name || ("signed-" + item.file.name);
-          item.manifest = data.signed_manifest || null;
-          item.hashAlgo = data.hash_algo || CONFIG.HASH_ALGO;
-          item.signAlgo = data.sign_algo || CONFIG.SIGN_ALGO;
-          item.status = "done";
-          item.duration = ((Date.now() - start) / 1000).toFixed(1) + "s";
+          // The proxy demotes a format rejection to result: "unsupported".
+          if (data.result === "unsupported") {
+            item.status = "warning";
+            item.code = data.code || "unsupported_format";
+            item.warning = data.message || `${item.label} is not a format DigiCert can sign right now.`;
+            item.action = data.action || null;
+            item.detail = data.detail || null;
+            item.duration = ((Date.now() - start) / 1000).toFixed(1) + "s";
+            // Remember it so the next person gets flagged up front.
+            DECLINED.set(extOf(item.file.name), { label: item.label, message: item.warning });
+          } else {
+            // Signed bytes stay on the server. The browser holds a URL.
+            item.signedUrl = data.url;
+            item.signedDownloadUrl = data.downloadUrl || data.url;
+            item.signedName = data.fileName || ("signed-" + item.file.name);
+            item.signedSize = data.size ?? null;
+            item.signedMime = data.mimeType || item.file.type;
+            item.manifest = data.manifest || null;
+            item.hashAlgo = data.hashAlgo || null;
+            item.signAlgo = data.signAlgo || null;
+            item.status = "done";
+            item.duration = ((Date.now() - start) / 1000).toFixed(1) + "s";
+          }
         } catch (err) {
           item.status = "error";
+          item.code = err.code || "network";
           item.error = err.message;
+          item.action = err.action || `Retry once. If it fails again, tell ${CONFIG.SUPPORT}.`;
+          item.detail = err.detail || null;
           item.duration = ((Date.now() - start) / 1000).toFixed(1) + "s";
         }
 
@@ -713,71 +1004,155 @@
       signing = false;
       $("progressLabel").textContent = "Batch complete";
 
-      const successes = queue.filter(q => q.status === "done").length;
+      const signed = queue.filter(q => q.status === "done");
+      const skipped = queue.filter(q => q.status === "warning");
       const failures = queue.filter(q => q.status === "error").length;
 
-      $("successCount").textContent = successes;
+      $("successCount").textContent = signed.length;
       $("failCount").textContent = failures;
+      $("skipCount").textContent = skipped.length;
+      $("skipStat").classList.toggle("hidden", skipped.length === 0);
       $("resultsSummary").classList.remove("hidden");
 
-      if (successes > 0) {
+      const failed = queue.filter(q => q.status === "error");
+      if (skipped.length || failed.length) renderBatchNotice(signed, skipped, failed);
+
+      if (signed.length > 0) {
         $("verifyBar").classList.remove("hidden");
         $("btnResults").classList.remove("hidden");
-        $("btnDownloadZip").textContent = successes === 1
-          ? " Download Signed Image"
-          : ` Download All (${successes}) as ZIP`;
+        const totalSigned = signed.reduce((s, q) => s + (q.signedSize || q.file.size), 0);
+        $("btnDownloadLabel").textContent = signed.length === 1
+          ? "Download Signed File"
+          : totalSigned > ZIP_LIMIT
+            ? `Download All (${signed.length}) Individually`
+            : `Download All (${signed.length}) as ZIP`;
       }
 
       // Build signing log
       renderLog();
     }
 
+    // One notice at the end of the batch, written for whoever ran it rather
+    // than whoever built it. Groups by cause so a mixed batch reads cleanly.
+    function renderBatchNotice(signed, skipped, failed) {
+      const lines = [];
+      let headline;
+
+      if (skipped.length) {
+        const byType = new Map();
+        for (const q of skipped) {
+          if (!byType.has(q.label)) byType.set(q.label, []);
+          byType.get(q.label).push(q.file.name);
+        }
+        for (const [label, names] of byType) {
+          const example = skipped.find(q => q.label === label);
+          lines.push(
+            `${label}: ${names.length} ${names.length === 1 ? "file" : "files"} not signed. ${example.action || ""}`.trim()
+          );
+        }
+      }
+
+      if (failed.length) {
+        const byCode = new Map();
+        for (const q of failed) {
+          const key = q.code || "unknown";
+          if (!byCode.has(key)) byCode.set(key, []);
+          byCode.get(key).push(q);
+        }
+        for (const [, group] of byCode) {
+          const first = group[0];
+          lines.push(
+            `${group.length} ${group.length === 1 ? "file" : "files"} failed: ${first.error} ${first.action || ""}`.trim()
+          );
+        }
+      }
+
+      // Lead with the thing that needs a decision.
+      if (failed.length && skipped.length) {
+        headline = `${signed.length} signed, ${skipped.length} in an unsupported format, ${failed.length} failed.`;
+      } else if (failed.length) {
+        headline = `${signed.length} signed, ${failed.length} failed.`;
+      } else {
+        headline = `${signed.length} signed. ${skipped.length} ${skipped.length === 1 ? "file is" : "files are"} in a format DigiCert cannot sign yet.`;
+      }
+
+      showWarn(headline, lines, { hard: failed.length > 0, copyReport: true });
+    }
+
     // ═══ Download ═══
+    function triggerDownload(href, filename, revoke) {
+      const a = document.createElement("a");
+      a.href = href;
+      a.download = filename;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      if (revoke) setTimeout(() => URL.revokeObjectURL(href), 30000);
+    }
+
     async function handleDownloadZip() {
-      const signed = queue.filter(q => q.status === "done" && q.signedBlob);
+      const signed = queue.filter(q => q.status === "done" && q.signedUrl);
+      if (!signed.length) return;
 
       if (signed.length === 1) {
-        // Single file — just download directly
-        const item = signed[0];
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(item.signedBlob);
-        a.download = item.signedName;
-        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        triggerDownload(signed[0].signedDownloadUrl, signed[0].signedName);
         return;
       }
 
-      // Multiple files — create zip
+      // Zipping in the browser needs every file in memory. Past the ceiling,
+      // hand them over one at a time instead of crashing the tab.
+      const totalSigned = signed.reduce((s, q) => s + (q.signedSize || q.file.size), 0);
+      if (totalSigned > ZIP_LIMIT) {
+        for (const item of signed) {
+          triggerDownload(item.signedDownloadUrl, item.signedName);
+          await new Promise(r => setTimeout(r, 600));
+        }
+        return;
+      }
+
       const zip = new JSZip();
       const usedNames = {};
       for (const item of signed) {
+        const blob = await fetchSignedBlob(item);
+        if (!blob) continue;
         let name = item.signedName;
         if (usedNames[name]) {
-          const ext = name.lastIndexOf(".");
-          name = name.substring(0, ext) + "-" + (++usedNames[name]) + name.substring(ext);
+          const dot = name.lastIndexOf(".");
+          const stem = dot === -1 ? name : name.substring(0, dot);
+          const tail = dot === -1 ? "" : name.substring(dot);
+          name = stem + "-" + (usedNames[item.signedName] + 1) + tail;
         }
         usedNames[item.signedName] = (usedNames[item.signedName] || 0) + 1;
-        zip.file(name, item.signedBlob);
+        zip.file(name, blob);
       }
 
       const blob = await zip.generateAsync({ type: "blob" });
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = "signed-images-" + new Date().toISOString().slice(0, 10) + ".zip";
-      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      triggerDownload(
+        URL.createObjectURL(blob),
+        "signed-files-" + new Date().toISOString().slice(0, 10) + ".zip",
+        true
+      );
+    }
+
+    async function fetchSignedBlob(item) {
+      if (item.signedBlob) return item.signedBlob;
+      try {
+        const res = await fetch(item.signedUrl);
+        if (!res.ok) return null;
+        item.signedBlob = await res.blob();
+        return item.signedBlob;
+      } catch {
+        return null;
+      }
     }
 
     function downloadSingle(id) {
       const item = queue.find(q => q.id === id);
-      if (!item || !item.signedBlob) return;
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(item.signedBlob);
-      a.download = item.signedName;
-      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      if (!item || !item.signedDownloadUrl) return;
+      triggerDownload(item.signedDownloadUrl, item.signedName);
     }
 
     // ═══ Signing log ═══
     function renderLog() {
-      const completed = queue.filter(q => q.status === "done" || q.status === "error");
+      const completed = queue.filter(q => q.status === "done" || q.status === "error" || q.status === "warning");
       if (completed.length === 0) return;
 
       $("logSection").classList.remove("hidden");
@@ -788,11 +1163,14 @@
       for (const item of completed) {
         const tr = document.createElement("tr");
         tr.innerHTML = `
-          <td class="log-name">${esc(item.file.name)}</td>
+          <td class="log-name">${esc(item.file.name)}<div style="font-size:10px;font-family:var(--mono);color:var(--sub);margin-top:2px;">${esc(item.label)}</div></td>
           <td style="font-family:var(--mono);font-size:11.5px;color:var(--sub)">${formatBytes(item.file.size)}</td>
           <td>
-            <span class="log-status ${item.status}">${item.status === "done" ? "✓ Signed" : "✕ Failed"}</span>
-            ${item.status === "error" && item.error ? `<div style="font-size:10.5px;color:var(--red);margin-top:3px;max-width:200px;line-height:1.4;">${esc(item.error)}</div>` : ""}
+            <span class="log-status ${item.status}">${item.status === "done" ? "✓ Signed" : item.status === "warning" ? "⚠ Not supported" : "✕ Failed"}</span>
+            ${item.status !== "done" ? `<div style="font-size:10.5px;color:${item.status === "warning" ? "var(--amber)" : "var(--red)"};margin-top:3px;max-width:230px;line-height:1.45;">
+              ${esc(item.warning || item.error || "")}
+              ${item.action ? `<div style="margin-top:2px;font-weight:600;">${esc(item.action)}</div>` : ""}
+            </div>` : ""}
           </td>
           <td style="font-family:var(--mono);font-size:11.5px;color:var(--sub)">${item.duration || "—"}</td>
           <td>${item.status === "done" ? `<button class="log-dl" onclick="showManifest(${item.id})">Manifest</button>` : ""}</td>
@@ -813,6 +1191,8 @@
       $("fileListSection").classList.add("hidden");
       $("progressSection").classList.add("hidden");
       $("resultsSummary").classList.add("hidden");
+      $("skipStat").classList.add("hidden");
+      $("warnBar").classList.add("hidden");
       $("verifyBar").classList.add("hidden");
       $("btnSign").classList.add("hidden");
       $("btnResults").classList.add("hidden");
@@ -851,7 +1231,7 @@
           manifestDisplay = `<div class="modal-manifest">${esc(item.manifest)}</div>`;
         }
       } else {
-        manifestDisplay = `<div class="modal-no-manifest">No manifest data was returned by the API for this image. The C2PA credential is embedded in the signed file — use <a href="https://contentcredentials.org/verify" target="_blank" style="color:var(--navy);font-weight:600;">contentcredentials.org/verify</a> or the Verify tab to inspect it.</div>`;
+        manifestDisplay = `<div class="modal-no-manifest">The API returned no manifest data for this file. The C2PA credential is embedded in the signed file itself — use <a href="https://contentcredentials.org/verify" target="_blank" style="color:var(--navy);font-weight:600;">contentcredentials.org/verify</a> or the Verify tab to inspect it.</div>`;
       }
 
       const modal = $("manifestModal");
@@ -869,10 +1249,10 @@
               <div class="modal-meta">
                 <div><div class="mm-label">Original file</div><div class="mm-value">${esc(item.file.name)}</div></div>
                 <div><div class="mm-label">Signed file</div><div class="mm-value">${esc(item.signedName)}</div></div>
-                <div><div class="mm-label">Hash algorithm</div><div class="mm-value">${esc(item.hashAlgo)}</div></div>
-                <div><div class="mm-label">Signature algorithm</div><div class="mm-value">RSASSA-PSS</div></div>
+                <div><div class="mm-label">Hash algorithm</div><div class="mm-value">${esc(item.hashAlgo || "—")}</div></div>
+                <div><div class="mm-label">Signature algorithm</div><div class="mm-value">${esc(item.signAlgo || "—")}</div></div>
                 <div><div class="mm-label">Original size</div><div class="mm-value">${formatBytes(item.file.size)}</div></div>
-                <div><div class="mm-label">Signed size</div><div class="mm-value">${formatBytes(item.signedBlob.size)}</div></div>
+                <div><div class="mm-label">Signed size</div><div class="mm-value">${item.signedSize != null ? formatBytes(item.signedSize) : "—"}</div></div>
               </div>
               ${manifestDisplay}
             </div>
@@ -916,15 +1296,42 @@
       if (signed.length > 0) renderCompare();
     }
 
+    // Renders whichever media element the file kind supports, and falls back
+    // to a metadata card when the browser cannot display the format.
+    function mediaHtml(url, kind, mime, label, altLabel) {
+      if (!url) {
+        return `<div class="compare-noprev"><div class="np-ext">${esc(label)}</div><div>No inline preview for this format</div></div>`;
+      }
+      if (kind === "video") {
+        return `<video src="${url}" controls preload="metadata"></video>`;
+      }
+      if (kind === "audio") {
+        return `<audio src="${url}" controls></audio>`;
+      }
+      if (kind === "image" || kind === "vector") {
+        return `<img src="${url}" alt="${esc(altLabel)}">`;
+      }
+      if (kind === "document") {
+        return `<div class="compare-noprev"><div class="np-ext">${esc(label)}</div><div><a href="${url}" target="_blank" rel="noopener" style="color:var(--navy);font-weight:600;">Open in a new tab</a></div></div>`;
+      }
+      return `<div class="compare-noprev"><div class="np-ext">${esc(label)}</div><div>No inline preview for this format</div></div>`;
+    }
+
     function renderCompare() {
       const id = parseInt($("compareSelect").value);
       const item = queue.find(q => q.id === id);
       if (!item || item.status !== "done") {
-        $("compareContent").innerHTML = '<div class="compare-empty">Select a signed image above</div>';
+        $("compareContent").innerHTML = '<div class="compare-empty">Select a signed file above</div>';
         return;
       }
 
-      const signedUrl = URL.createObjectURL(item.signedBlob);
+      // Original comes from a local object URL, signed comes from the proxy.
+      const originalUrl = item.previewUrl ||
+        (item.kind === "audio" || item.kind === "document" ? URL.createObjectURL(item.file) : null);
+      if (originalUrl && !item.previewUrl) item.previewUrl = originalUrl;
+
+      const signedSize = item.signedSize != null ? item.signedSize : null;
+      const delta = signedSize != null ? signedSize - item.file.size : null;
 
       $("compareContent").innerHTML = `
         <div class="compare-container">
@@ -934,7 +1341,7 @@
               Original
             </div>
             <div class="compare-panel-body">
-              <img src="${item.previewUrl}" alt="Original">
+              ${mediaHtml(originalUrl, item.kind, item.file.type, item.label, "Original")}
             </div>
             <div class="compare-meta">
               <span>${esc(item.file.name)}</span>
@@ -950,15 +1357,15 @@
               Signed
             </div>
             <div class="compare-panel-body">
-              <img src="${signedUrl}" alt="Signed">
+              ${mediaHtml(item.signedUrl, item.kind, item.signedMime, item.label, "Signed")}
             </div>
             <div class="compare-meta">
               <span>${esc(item.signedName)}</span>
-              <span>${formatBytes(item.signedBlob.size)}</span>
+              <span>${signedSize != null ? formatBytes(signedSize) : "—"}</span>
             </div>
-            <div style="padding:8px 14px; border-top:1px solid var(--border-light); display:flex; align-items:center; justify-content:space-between;">
+            <div style="padding:8px 14px; border-top:1px solid var(--border-light); display:flex; align-items:center; justify-content:space-between; gap:8px;">
               <span class="compare-badge c2pa">C2PA Signed ✓</span>
-              <span style="font-size:10px; font-family:var(--mono); color:var(--sub);">+${formatBytes(item.signedBlob.size - item.file.size)} metadata</span>
+              ${delta != null ? `<span style="font-size:10px; font-family:var(--mono); color:var(--sub);">+${formatBytes(Math.max(delta, 0))} manifest</span>` : ""}
             </div>
           </div>
         </div>
@@ -970,41 +1377,55 @@
     const verifyInput = $("verifyInput");
 
     verifyDrop.addEventListener("dragover", (e) => { e.preventDefault(); verifyDrop.classList.add("over"); $("verifyDropTitle").textContent = "Drop to verify"; });
-    verifyDrop.addEventListener("dragleave", () => { verifyDrop.classList.remove("over"); $("verifyDropTitle").textContent = "Drop a signed image here to verify"; });
+    verifyDrop.addEventListener("dragleave", () => { verifyDrop.classList.remove("over"); $("verifyDropTitle").textContent = "Drop a signed file here to verify"; });
     verifyDrop.addEventListener("drop", (e) => {
       e.preventDefault(); verifyDrop.classList.remove("over");
-      $("verifyDropTitle").textContent = "Drop a signed image here to verify";
+      $("verifyDropTitle").textContent = "Drop a signed file here to verify";
       if (e.dataTransfer.files[0]) verifyFile(e.dataTransfer.files[0]);
     });
     verifyDrop.addEventListener("click", () => verifyInput.click());
     verifyInput.addEventListener("change", () => { if (verifyInput.files[0]) verifyFile(verifyInput.files[0]); verifyInput.value = ""; });
 
+    // Scans the head and tail of the file rather than decoding the whole
+    // thing. A 400 MB video would otherwise blow the tab's memory, and C2PA
+    // manifests sit in a top-level box near one end of the container.
+    const SCAN_CHUNK = 4 * 1024 * 1024;
+
+    async function readScanText(file) {
+      const parts = [];
+      if (file.size <= SCAN_CHUNK * 2) {
+        parts.push(await file.arrayBuffer());
+      } else {
+        parts.push(await file.slice(0, SCAN_CHUNK).arrayBuffer());
+        parts.push(await file.slice(file.size - SCAN_CHUNK).arrayBuffer());
+      }
+      const decoder = new TextDecoder("latin1", { fatal: false });
+      return parts.map(b => decoder.decode(new Uint8Array(b))).join("\n");
+    }
+
     async function verifyFile(file) {
       const result = $("verifyResult");
       result.classList.remove("hidden");
+      result.innerHTML = `<div class="verify-result" style="display:flex;align-items:center;gap:10px;"><div class="mini-spinner"></div><span style="font-size:13px;color:var(--navy);">Scanning ${esc(file.name)}…</span></div>`;
 
-      // Read file bytes and search for C2PA marker
-      const buffer = await file.arrayBuffer();
-      const bytes = new Uint8Array(buffer);
-      const text = new TextDecoder("ascii", { fatal: false }).decode(bytes);
+      const text = await readScanText(file);
 
-      // C2PA manifests contain these markers in the binary
-      const hasC2PA = text.includes("c2pa") || text.includes("C2PA") ||
-                      text.includes("jumbf") || text.includes("cai") ||
-                      text.includes("contentauth");
+      // C2PA manifests carry these markers in the binary, whatever the wrapper.
+      const hasC2PA = /c2pa|jumbf|contentauth|urn:uuid:c2pa/i.test(text) ||
+                      text.includes("cai") && /claim_generator|active_manifest/.test(text);
 
-      // Try to find a JSON manifest block
       let manifestJson = null;
       const c2paIdx = text.indexOf('"active_manifest"');
       if (c2paIdx === -1) {
-        // Try another common field
         const claimIdx = text.indexOf('"claim_generator"');
-        if (claimIdx !== -1) {
-          manifestJson = extractJson(text, claimIdx);
-        }
+        if (claimIdx !== -1) manifestJson = extractJson(text, claimIdx);
       } else {
         manifestJson = extractJson(text, c2paIdx);
       }
+
+      const { label } = describe(file);
+      const meta = `${esc(file.name)} · ${formatBytes(file.size)} · ${esc(label)}`;
+      const partial = file.size > SCAN_CHUNK * 2;
 
       if (hasC2PA) {
         result.innerHTML = `
@@ -1015,7 +1436,7 @@
               </div>
               <div>
                 <div class="vr-title found">C2PA Content Credential Detected</div>
-                <div style="font-size:12px;color:var(--sub);margin-top:2px;">${esc(file.name)} · ${formatBytes(file.size)}</div>
+                <div style="font-size:12px;color:var(--sub);margin-top:2px;">${meta}</div>
               </div>
             </div>
             ${manifestJson ? `
@@ -1040,11 +1461,12 @@
               </div>
               <div>
                 <div class="vr-title none">No Content Credential Found</div>
-                <div style="font-size:12px;color:var(--sub);margin-top:2px;">${esc(file.name)} · ${formatBytes(file.size)}</div>
+                <div style="font-size:12px;color:var(--sub);margin-top:2px;">${meta}</div>
               </div>
             </div>
             <div style="font-size:12.5px;color:var(--sub);line-height:1.6;margin-top:8px;">
-              This image does not appear to contain a C2PA manifest. It may not have been signed, or the signature may have been stripped during processing (e.g., by social media platforms, image editors, or screenshot tools).
+              This file does not appear to contain a C2PA manifest. Either it was never signed, or the signature was stripped in processing — social platforms, editors, transcoders and screenshot tools all drop it.
+              ${partial ? `<br><br>This scan covered the first and last ${formatBytes(SCAN_CHUNK)} of the file. A manifest buried in the middle of a large container would not show up here, so confirm with an external verifier.` : ""}
             </div>
           </div>
         `;
